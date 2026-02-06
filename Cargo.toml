@@ -1,0 +1,10 @@
+[package]
+name = "displaymd"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.8"
+clap = {version="4.5.57", features = ["derive"]}
+markdown = "1.0.0"
+tokio = { version = "1.49.0", features = ["rt-multi-thread","net","macros"]}
