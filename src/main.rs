@@ -5,6 +5,7 @@ use axum::{
     routing::get,
 };
 use clap::Parser;
+use std::io;
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 #[derive(Parser)]
@@ -53,15 +54,22 @@ async fn index(State(state): State<Arc<AppState>>) -> Redirect {
     Redirect::to(&format!("/view/{first}"))
 }
 
+// check a file exists in a subdir of root and
+fn file_to_markdown(root: &PathBuf, path: &String) -> io::Result<String> {
+    let file_path = match root.join(path).canonicalize() {
+        Ok(p) if p.starts_with(root) => p,
+        _ => return Err(io::ErrorKind::NotFound.into()),
+    };
+    std::fs::read_to_string(&file_path)
+}
+
 async fn view(State(state): State<Arc<AppState>>, Path(path): Path<String>) -> Html<String> {
+    let content = match file_to_markdown(&state.root, &path) {
+        Ok(c) => c,
+        _ => return Html("<p>File not found<p>".to_string()),
+    };
     let files = collect_md_files(&state.root);
     let sidebar = build_sidebar(&files, &path);
-
-    let file_path = state.root.join(&path);
-    let content = match std::fs::read_to_string(&file_path) {
-        Ok(md) => markdown::to_html(&md),
-        Err(_) => "<p>File not found</p>".to_string(),
-    };
 
     Html(format!(
         r#"<!DOCTYPE html>
